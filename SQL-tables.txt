@@ -1,0 +1,60 @@
+CREATE TABLE snapshots (
+	snapshot_id BIGSERIAL PRIMARY KEY,
+	snapshot_timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+	status TEXT
+);
+
+CREATE TABLE items (
+	item_id BIGSERIAL PRIMARY KEY,
+	item_name TEXT UNIQUE NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_items_item_name ON items (item_name);
+
+CREATE TABLE players (
+	player_id BIGSERIAL PRIMARY KEY,
+	player_name TEXT UNIQUE NOT NULL,
+	first_snapshot_id BIGINT REFERENCES snapshots(snapshot_id)
+);
+
+CREATE UNIQUE INDEX idx_players_player_name ON players (player_name);
+CREATE INDEX idx_players_first_snapshot_id ON players (first_snapshot_id);
+
+CREATE TABLE currencies (
+	currency_id BIGSERIAL PRIMARY KEY,
+	currency_name TEXT UNIQUE NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_currencies_currency_name ON currencies (currency_name);
+
+CREATE TABLE stores (
+	store_snapshot_entry_id BIGSERIAL PRIMARY KEY,
+	snapshot_id BIGINT REFERENCES snapshots(snapshot_id) ON DELETE CASCADE NOT NULL,
+	store_name TEXT NOT NULL,
+	owner_player_id BIGINT REFERENCES players(player_id) NOT NULL,
+	balance NUMERIC(14, 2),
+	currency_id BIGINT REFERENCES currencies(currency_id) NOT NULL,
+	is_enabled BOOLEAN NOT NULL
+);
+
+CREATE INDEX idx_stores_snapshot_id ON stores (snapshot_id);
+CREATE INDEX idx_stores_snapshot_owner ON stores (snapshot_id, owner_player_id);
+CREATE INDEX idx_stores_currency_id ON stores (currency_id);
+
+CREATE TABLE offers (
+	offer_snapshot_entry_id BIGSERIAL PRIMARY KEY,
+	snapshot_id BIGINT REFERENCES snapshots(snapshot_id) ON DELETE CASCADE NOT NULL,
+	store_snapshot_entry_id BIGINT REFERENCES stores(store_snapshot_entry_id) ON DELETE CASCADE NOT NULL,
+	item_id BIGINT REFERENCES items(item_id) NOT NULL,
+	is_buying BOOLEAN NOT NULL,
+	price NUMERIC(14, 2),
+	quantity BIGINT,
+	limit_amount BIGINT,
+	max_num_wanted BIGINT,
+	min_durability REAL
+);
+
+CREATE INDEX idx_offers_snapshot_id ON offers (snapshot_id);
+CREATE INDEX idx_offers_store_snapshot_entry_id ON offers (store_snapshot_entry_id);
+CREATE INDEX idx_offers_item_id ON offers (item_id);
+CREATE INDEX idx_offers_snapshot_item ON offers (snapshot_id, item_id);
